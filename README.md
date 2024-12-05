@@ -15,9 +15,11 @@ between them using correlation heatmaps
 
 Things that I want to try:
 1. Feature Engineer: is  there an efficient way to combine one or more features such that
-they all become meaningful together (instead of individually) without any loss of information
-2. Test this using Boosting algorithms to check if these replacement features are sufficiently 
-informative while being correlated with original features
+they all become meaningful together (instead of individually) without any loss of information?
+2. Can this be achieved by solely studying and understanding various forms of EDAs or
+do we want to apply any ML algorithms?
+3. Test this using Boosting algorithms to check if these replacement features are
+informative while being sufficiently correlated with original features
 
 Since this is still and ongoing project, the code will break or tend to be faulty. 
 I am working on this during my free time, so activity on this would be haphazard and random.
