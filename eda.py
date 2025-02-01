@@ -55,20 +55,17 @@ def create_new_features(data):
 
 def eda_plots_numerical_features(features, train, save='numerical'):
     num_features = len(features)
-    fig, axes = plt.subplots(num_features, 3, figsize=(12, 4 * num_features))
+    fig, axes = plt.subplots(num_features, 2, figsize=(12, 4 * num_features))
 
     for i, feature in enumerate(features):
-        # Boxplot
-        sns.boxplot(data=train[features], x=feature, ax=axes[i, 0])
-        axes[i, 0].set_title(f'Boxplot of {feature}')
 
         # Histogram
-        sns.histplot(data=train[features], x=feature, kde=False, bins=30, ax=axes[i, 1])
+        sns.histplot(data=train[features], x=feature, kde=False, bins=30, ax=axes[i, 0])
         axes[i, 1].set_title(f'Histogram of {feature}')
 
-        # KDE Plot
-        sns.kdeplot(data=train[features], x=feature, ax=axes[i, 2])
-        axes[i, 2].set_title(f'KDE of {feature}')
+        #Box Plot
+        sns.boxplot(data=train, x=feature, y='SalePrice', ax=axes[i, 1])
+
 
     # Adjust layout for better spacing
     plt.tight_layout()
