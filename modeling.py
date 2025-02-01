@@ -21,32 +21,40 @@ from sklearn.model_selection import KFold
 
 from matplotlib.backends.backend_pdf import PdfPages
 from eda import eda_plots_categorical_features, create_new_features
+from dtp import process_categorical
 
 def rmse(y_pred, y_actual):
-    l_y_pred = y_pred
-    l_y_actual = y_actual
-    # l_y_pred = np.log(y_pred)
-    # l_y_actual = np.log(y_actual)
+    # l_y_pred = y_pred
+    # l_y_actual = y_actual
+    l_y_pred = np.log(y_pred)
+    l_y_actual = np.log(y_actual)
 
 
     error = mse(l_y_pred, l_y_actual)
     root_error = np.sqrt(error)
 
-    return root_error
+    range_min = l_y_actual.min() - root_error
+    range_max = l_y_actual.max() + root_error
+    return root_error, range_min, range_max
 
 def model(X_train, X_cv, y_train, y_cv):
     X_train['SalePrice'] = y_train
     X_cv['SalePrice'] = y_cv
 
+    to_drop = ['Street', 'LandContour', 'Utilities', 'LandSlope', 'BldgType', 'RoofStyle', 'BsmtFinType2', 'Heating',
+               'CentralAir', 'Functional', 'GarageQual', 'GarageCond', 'Fence', 'MiscFeature', 'Alley']
+
     X_train = create_new_features(X_train)
     X_train_encoded = X_train
     categorical_features = X_train_encoded.columns[~X_train_encoded.columns.isin(X_train_encoded._get_numeric_data().columns)].to_list()
-    X_train_encoded[categorical_features] = \
-        eda_plots_categorical_features(categorical_features, X_train, save_eda=False)[categorical_features]
+    X_train_encoded = \
+        process_categorical(X_train, to_drop)
+        # eda_plots_categorical_features(categorical_features, X_train, save_eda=False)[categorical_features]
     X_cv = create_new_features(X_cv)
     X_cv_encoded = X_cv
-    X_cv_encoded[categorical_features] = \
-        eda_plots_categorical_features(categorical_features, X_cv, save_eda=False)[categorical_features]
+    X_cv_encoded = \
+        process_categorical(X_cv, to_drop)
+        # eda_plots_categorical_features(categorical_features, X_cv, save_eda=False)[categorical_features]
 
     #drop y
     y_train_encoded = X_train['SalePrice']
@@ -55,22 +63,22 @@ def model(X_train, X_cv, y_train, y_cv):
     X_cv_encoded.drop(columns='SalePrice', inplace=True)
 
     #drop other features
-    X_train_encoded.drop(columns=['SaleType', 'Exterior2nd', 'KitchenQual', 'GarageCond',  # categorical
-                          'GarageYrBlt', 'TotRmsAbvGrd', 'GarageArea',
-                          'BsmtFullBath', 'FullBath', 'BsmtHalfBath', 'HalfBath'], inplace=True)  # numerical
-    X_cv_encoded.drop(columns=['SaleType', 'Exterior2nd', 'KitchenQual', 'GarageCond',  # categorical
-                          'GarageYrBlt', 'TotRmsAbvGrd', 'GarageArea',
-                          'BsmtFullBath', 'FullBath', 'BsmtHalfBath', 'HalfBath'], inplace=True)  # numerical
+    # X_train_encoded.drop(columns=['SaleType', 'Exterior2nd', 'KitchenQual', 'GarageCond',  # categorical
+    #                       'GarageYrBlt', 'TotRmsAbvGrd', 'GarageArea',
+    #                       'BsmtFullBath', 'FullBath', 'BsmtHalfBath', 'HalfBath'], inplace=True)  # numerical
+    # X_cv_encoded.drop(columns=['SaleType', 'Exterior2nd', 'KitchenQual', 'GarageCond',  # categorical
+    #                       'GarageYrBlt', 'TotRmsAbvGrd', 'GarageArea',
+    #                       'BsmtFullBath', 'FullBath', 'BsmtHalfBath', 'HalfBath'], inplace=True)  # numerical
 
 
-    gbm = xgb.XGBRegressor(n_estimators=100, max_depth=5, eta=0.05, subsample=0.6, colsample_bytree=0.8)
+    gbm = xgb.XGBRegressor(n_estimators=100, max_depth=5, eta=0.05, subsample=0.6, colsample_bytree=0.8, enable_categorical=True)
     gbm = gbm.fit(X_train_encoded, y_train_encoded)
     y_train_encoded_pred_gbm = gbm.predict(X_train_encoded)
     y_cv_encoded_pred_gbm = gbm.predict(X_cv_encoded)
     print(f' gbm score on training set: {gbm.score(X_train_encoded, y_train_encoded)}')
-    print(f' gbm rmse on training set: {rmse(y_train_encoded_pred_gbm, y_train_encoded)}')
+    print(f' gbm rmse on training set (log): {rmse(y_train_encoded_pred_gbm, y_train_encoded)}')
     print(f' gbm score on CV set: {gbm.score(X_cv_encoded, y_cv_encoded)}')
-    print(f' gbm rmse on CV set: {rmse(y_cv_encoded_pred_gbm, y_cv_encoded)}')
+    print(f' gbm rmse on CV set (log): {rmse(y_cv_encoded_pred_gbm, y_cv_encoded)}')
     gbm_feature_importances = pd.Series(gbm.feature_importances_, index=X_train_encoded.columns)
     gbm_top_ten_features = gbm_feature_importances.nlargest(10).keys()
     gbm_feature_importances.nlargest(30).plot(kind='barh', figsize=(35, 20))
@@ -88,6 +96,9 @@ numerical_features = train_X.columns[train_X.columns.isin(train_X._get_numeric_d
 
 X_train, X_cv, y_train, y_cv = train_test_split(
     train_X, y_, test_size=0.33, random_state=42)
+
+#FIXME: are xgboost type of models good for such low sample size?
+#FIXME: how much do the errors transform to in terms of sale price?
 
 X_train.reset_index(drop=True, inplace=True)
 y_train.reset_index(drop=True, inplace=True)

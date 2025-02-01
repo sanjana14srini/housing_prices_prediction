@@ -41,15 +41,15 @@ def create_new_features(data):
     data['FrontageToArea'] = data['LotFrontage'] / data['LotArea']
 
     # interaction between PoolQC and Utilities (encoding categorical feature interactions)
-    data['PoolQCUtilities'] = data['PoolQC'].astype(str) + '_' + data['Utilities'].astype(str)
+    # data['PoolQCUtilities'] = data['PoolQC'].astype(str) + '_' + data['Utilities'].astype(str)
 
     # log transform for normalization
-    data['SalePrice'] = np.log(data['SalePrice'])
-    data[['PoolArea', 'MiscVal', 'ScreenPorch', '3SsnPorch', 'EnclosedPorch', 'WoodDeckSF', 'GarageArea', 'GrLivArea',
-           '2ndFlrSF', 'BsmtFinSF2', 'MasVnrArea', 'LotArea']] = \
-        np.log1p(data[['PoolArea', 'MiscVal', 'ScreenPorch', '3SsnPorch', 'EnclosedPorch', 'WoodDeckSF', 'GarageArea',
-                        'GrLivArea',
-                        '2ndFlrSF', 'BsmtFinSF2', 'MasVnrArea', 'LotArea']])
+    # data['SalePrice'] = np.log(data['SalePrice'])
+    # data[['PoolArea', 'MiscVal', 'ScreenPorch', '3SsnPorch', 'EnclosedPorch', 'WoodDeckSF', 'GarageArea', 'GrLivArea',
+    #        '2ndFlrSF', 'BsmtFinSF2', 'MasVnrArea', 'LotArea']] = \
+    #     np.log1p(data[['PoolArea', 'MiscVal', 'ScreenPorch', '3SsnPorch', 'EnclosedPorch', 'WoodDeckSF', 'GarageArea',
+    #                     'GrLivArea',
+    #                     '2ndFlrSF', 'BsmtFinSF2', 'MasVnrArea', 'LotArea']])
     
     return data
 
@@ -75,6 +75,21 @@ def eda_plots_numerical_features(features, train, save='numerical'):
     plt.savefig(f'eda_plots_{save}_features.png')
     plt.close()
 
+def eda_raw_data_plots(train):
+    num_features = len(train.columns)
+    fig, axes = plt.subplots(num_features, 2, figsize=(12, 4 * num_features))
+
+    for i, feature in enumerate(train.columns):
+        # Count Plot
+        sns.countplot(data=train, x=feature, ax=axes[i, 0])
+
+        #Box Plot
+        sns.boxplot(data=train, x=feature, y='SalePrice', ax=axes[i, 1])
+
+    # Adjust layout for better spacing
+    plt.tight_layout()
+    plt.savefig(f'eda_raw_plots_features.png')
+    plt.close()
 
 def eda_plots_categorical_features(features, train, save_eda=True):
     encoder = TargetEncoder(target_type='continuous', smooth=5)
@@ -137,10 +152,13 @@ y_ = train['SalePrice']
 categorical_features = train_X.columns[~train_X.columns.isin(train_X._get_numeric_data().columns)].to_list()
 numerical_features = train_X.columns[train_X.columns.isin(train_X._get_numeric_data().columns)].to_list()
 
+categorical_features = categorical_features + ['MSSubClass', 'OverallQual', 'OverallCond']
+numerical_features = [x for x in numerical_features if x not in ['MSSubClass', 'OverallQual', 'OverallCond']]
 # plotting correlation for categorical features
 # categorical_corr_ = get_categorical_correlation(train_X[categorical_features])
 # categorical_corr_.to_csv('correlation_categorical.csv')
 
+eda_raw_data_plots(train[categorical_features + ['SalePrice']])
 
 # plotting correlation for numerical features
 
@@ -182,3 +200,7 @@ with PdfPages('correlations.pdf') as pdf:
     plt.title('correlation_all')
     pdf.savefig()
     plt.close()
+
+#FIXME: deep dive into each of the raw features and how they correlate with each other
+#FIXME: why log transform and not other transformation? do you want to change the distribution of the data itself?
+#FIXME: try other forms of data encoding? target encoding vs. other kinds
